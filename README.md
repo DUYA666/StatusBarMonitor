@@ -6,21 +6,21 @@
 # 如何使用：
 1. 直接安装。
 2. Lsposed启用作用域：系统界面。
-3. 给root权限**(注意：不需要检测GPU的话不用给root权限)**
+3. 给root权限。**(此时在底部不用上滑，直接左右滑动可以切换app即为成功)**
 4. 打开App：重启作用域。
 
 # 使用效果：
 从左到右依次是：CPU使用率(CPU最小-最大频率)，GPU使用率(GPU频率)，RAM使用率，ZRAM使用率，电池温度，功耗，FPS
 <div>
-<img src="https://github.com/a709560839/StatusBarMonitor/blob/main/screenshot/1.jpg" width="555">
+<img src="https://github.com/a709560839/StatusBarMonitor/blob/main/screenshot/1.jpg" width="555" alt="使用效果截图1">
 </div>
 <div>
-<img src="https://github.com/a709560839/StatusBarMonitor/blob/main/screenshot/2.jpg" width="555">
+<img src="https://github.com/a709560839/StatusBarMonitor/blob/main/screenshot/2.jpg" width="555" alt="使用效果截图2">
 </div>
 
 # App界面：
 <div>
-<img src="https://github.com/a709560839/StatusBarMonitor/blob/main/screenshot/3.png" width="333">
+<img src="https://github.com/a709560839/StatusBarMonitor/blob/main/screenshot/3.png" width="333" alt="App界面截图">
 </div>
 
 # 自测可行版本：
