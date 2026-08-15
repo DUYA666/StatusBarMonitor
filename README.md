@@ -7,7 +7,7 @@
 1. 直接安装。
 2. Lsposed启用作用域：系统界面。
 3. 给root权限。**(注意：不需要检测GPU的话不用给root权限)**
-4. 打开App：重启SystemUI。
+4. 重启SystemUI。**(有root权限App里就可以重启，没有root权限就用有root权限的终端执行：killall com.android.systemui)**
 
 # 使用效果：
 从左到右依次是：CPU使用率(CPU最小-最大频率)，GPU使用率(GPU频率)，RAM使用率，ZRAM使用率，电池温度，功耗，FPS
