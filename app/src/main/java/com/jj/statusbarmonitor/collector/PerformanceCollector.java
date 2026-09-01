@@ -378,7 +378,7 @@ public class PerformanceCollector {
             float currentmA = 0;
             float voltageV = 4.0f;
 
-            // ----- 使用可靠的 shell 方式读取电流 -----
+            // ----- 读取电流（单位：mA）-----
             String currentStr = execShell("cat /sys/class/power_supply/battery/current_now");
             if (currentStr != null && !currentStr.isEmpty()) {
                 try {
@@ -386,7 +386,7 @@ public class PerformanceCollector {
                 } catch (Exception ignored) {}
             }
 
-            // ----- 如果 shell 方式失败，回退到 BatteryManager API（仅电流）-----
+            // ----- 如果 shell 方式失败，回退到 BatteryManager API -----
             if (currentmA == 0) {
                 try {
                     int currentNow = batteryManager.getIntProperty(BatteryManager.BATTERY_PROPERTY_CURRENT_NOW);
@@ -394,7 +394,7 @@ public class PerformanceCollector {
                 } catch (Exception ignored) {}
             }
 
-            // ----- 使用可靠的 shell 方式读取电压 -----
+            // ----- 读取电压（单位：µV → V，双电芯×2）-----
             String voltageStr = execShell("cat /sys/class/power_supply/battery/voltage_now");
             if (voltageStr != null && !voltageStr.isEmpty()) {
                 try {
@@ -406,7 +406,7 @@ public class PerformanceCollector {
                 } catch (Exception ignored) {}
             }
 
-            // ----- 如果 sysfs 电压失败，使用广播中缓存的电压（由 batteryReceiver 更新）-----
+            // ----- 如果 sysfs 电压失败，使用广播中缓存的电压 -----
             if (voltageV == 4.0f && lastBatteryVoltageMv > 0) {
                 voltageV = lastBatteryVoltageMv / 1000f;
                 if (voltageV < 6.0f) {
@@ -414,11 +414,18 @@ public class PerformanceCollector {
                 }
             }
 
-            // ----- 计算功率 (W)，保留正负号 -----
-            float power = (currentmA * voltageV) / 1000f;
+            // ----- 判断充电状态（来自广播）-----
+            boolean isCharging = lastBatteryStatus == BatteryManager.BATTERY_STATUS_CHARGING ||
+                                 lastBatteryStatus == BatteryManager.BATTERY_STATUS_FULL;
+
+            // ----- 强制修正符号：充电取正，放电取负（绝对值）-----
+            float absCurrent = Math.abs(currentmA);
+            float signedCurrent = isCharging ? absCurrent : -absCurrent;
+
+            // ----- 计算功率 (W) -----
+            float power = (signedCurrent * voltageV) / 1000f;
             data.batteryPowerW = power;
-            data.isCharging = lastBatteryStatus == BatteryManager.BATTERY_STATUS_CHARGING ||
-                              lastBatteryStatus == BatteryManager.BATTERY_STATUS_FULL;
+            data.isCharging = isCharging;
         }
     }
     /** 优先读面板 measured_fps；均失败则标记 READ_FAILED 由 Choreographer 兜底 */
