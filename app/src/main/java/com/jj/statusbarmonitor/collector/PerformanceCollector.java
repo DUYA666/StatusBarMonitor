@@ -19,6 +19,7 @@ import java.io.File;
 import java.io.FileReader;
 import java.util.ArrayList;
 import java.util.List;
+import java.io.DataOutputStream;
 
 /**
  * SystemUI 进程内性能采集：CPU / 内存 / 电池 / FPS；
