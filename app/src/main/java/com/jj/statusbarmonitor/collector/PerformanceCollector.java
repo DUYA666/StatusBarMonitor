@@ -375,6 +375,9 @@ public class PerformanceCollector {
 
     private void collectBatteryData(PerformanceData data) {
         if (batteryManager != null) {
+            // ----- 设置电池温度（来自广播）-----
+            data.batteryTemp = lastBatteryTemp;
+
             float currentmA = 0;
             float voltageV = 4.0f;
 
@@ -383,7 +386,6 @@ public class PerformanceCollector {
             if (currentStr != null && !currentStr.isEmpty()) {
                 try {
                     float raw = Float.parseFloat(currentStr.trim());
-                    // 微安转毫安
                     currentmA = raw / 1000f;
                 } catch (Exception ignored) {}
             }
@@ -401,8 +403,7 @@ public class PerformanceCollector {
             if (voltageStr != null && !voltageStr.isEmpty()) {
                 try {
                     float volts = Float.parseFloat(voltageStr.trim()) / 1000000f;
-                    // 双电芯串联，总压 = 单芯 × 2
-                    volts *= 2;
+                    volts *= 2; // 双电芯
                     voltageV = volts;
                 } catch (Exception ignored) {}
             }
@@ -423,7 +424,7 @@ public class PerformanceCollector {
 
             // ----- 计算功率 (W) 并强制放大 1000 倍 -----
             float power = (signedCurrent * voltageV) / 1000f;
-            power *= 1000f;   // <--- 根据您的需求强制缩放
+            power *= 1000f; // 适配当前节点单位
 
             data.batteryPowerW = power;
             data.isCharging = isCharging;
