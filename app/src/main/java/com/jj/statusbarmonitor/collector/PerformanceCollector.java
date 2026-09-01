@@ -383,12 +383,12 @@ public class PerformanceCollector {
             if (currentStr != null && !currentStr.isEmpty()) {
                 try {
                     float raw = Float.parseFloat(currentStr.trim());
-                    // usb 节点返回微安 (µA)，需除以 1000 转为毫安 (mA)
+                    // 微安转毫安
                     currentmA = raw / 1000f;
                 } catch (Exception ignored) {}
             }
 
-            // ----- 如果 shell 方式失败，回退到 BatteryManager API -----
+            // ----- 如果 shell 失败，回退到 BatteryManager -----
             if (currentmA == 0) {
                 try {
                     int currentNow = batteryManager.getIntProperty(BatteryManager.BATTERY_PROPERTY_CURRENT_NOW);
@@ -401,30 +401,30 @@ public class PerformanceCollector {
             if (voltageStr != null && !voltageStr.isEmpty()) {
                 try {
                     float volts = Float.parseFloat(voltageStr.trim()) / 1000000f;
-                    // usb 电压是单电芯电压，双电芯串联需乘以 2
+                    // 双电芯串联，总压 = 单芯 × 2
                     volts *= 2;
                     voltageV = volts;
                 } catch (Exception ignored) {}
             }
 
-            // ----- 如果 sysfs 电压失败，使用广播中缓存的电压 -----
+            // ----- 如果电压失败，使用广播缓存 -----
             if (voltageV == 4.0f && lastBatteryVoltageMv > 0) {
                 voltageV = lastBatteryVoltageMv / 1000f;
-                if (voltageV < 6.0f) {
-                    voltageV *= 2;
-                }
+                if (voltageV < 6.0f) voltageV *= 2;
             }
 
-            // ----- 判断充电状态（来自广播）-----
+            // ----- 判断充电状态 -----
             boolean isCharging = lastBatteryStatus == BatteryManager.BATTERY_STATUS_CHARGING ||
                                  lastBatteryStatus == BatteryManager.BATTERY_STATUS_FULL;
 
-            // ----- 强制修正符号：充电取正，放电取负（绝对值）-----
+            // ----- 强制修正符号：充电取正，放电取负 -----
             float absCurrent = Math.abs(currentmA);
             float signedCurrent = isCharging ? absCurrent : -absCurrent;
 
-            // ----- 计算功率 (W) -----
+            // ----- 计算功率 (W) 并强制放大 1000 倍 -----
             float power = (signedCurrent * voltageV) / 1000f;
+            power *= 1000f;   // <--- 根据您的需求强制缩放
+
             data.batteryPowerW = power;
             data.isCharging = isCharging;
         }
