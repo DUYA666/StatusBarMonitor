@@ -386,6 +386,14 @@ public class PerformanceCollector {
                 } catch (Exception ignored) {}
             }
 
+            // ----- 如果 shell 方式失败，回退到 BatteryManager API（仅电流）-----
+            if (currentmA == 0) {
+                try {
+                    int currentNow = batteryManager.getIntProperty(BatteryManager.BATTERY_PROPERTY_CURRENT_NOW);
+                    currentmA = currentNow / 1000f;
+                } catch (Exception ignored) {}
+            }
+
             // ----- 使用可靠的 shell 方式读取电压 -----
             String voltageStr = execShell("cat /sys/class/power_supply/battery/voltage_now");
             if (voltageStr != null && !voltageStr.isEmpty()) {
@@ -398,21 +406,12 @@ public class PerformanceCollector {
                 } catch (Exception ignored) {}
             }
 
-            // ----- 如果 shell 方式失败，回退到 BatteryManager API -----
-            if (currentmA == 0) {
-                try {
-                    int currentNow = batteryManager.getIntProperty(BatteryManager.BATTERY_PROPERTY_CURRENT_NOW);
-                    currentmA = currentNow / 1000f;
-                } catch (Exception ignored) {}
-            }
-            if (voltageV == 4.0f) {
-                try {
-                    int voltageMv = batteryManager.getIntProperty(BatteryManager.BATTERY_PROPERTY_VOLTAGE_NOW);
-                    voltageV = voltageMv / 1000f;
-                    if (voltageV < 6.0f) {
-                        voltageV *= 2;
-                    }
-                } catch (Exception ignored) {}
+            // ----- 如果 sysfs 电压失败，使用广播中缓存的电压（由 batteryReceiver 更新）-----
+            if (voltageV == 4.0f && lastBatteryVoltageMv > 0) {
+                voltageV = lastBatteryVoltageMv / 1000f;
+                if (voltageV < 6.0f) {
+                    voltageV *= 2;
+                }
             }
 
             // ----- 计算功率 (W)，保留正负号 -----
