@@ -14,6 +14,7 @@ import com.jj.statusbarmonitor.bridge.PerfBridge;
 import com.jj.statusbarmonitor.constant.Constants;
 
 import java.io.BufferedReader;
+import java.io.InputStreamReader;
 import java.io.File;
 import java.io.FileReader;
 import java.util.ArrayList;
@@ -358,29 +359,51 @@ public class PerformanceCollector {
         data.batteryTemp = lastBatteryTemp;
 
         if (batteryManager != null) {
-            int currentNow = batteryManager.getIntProperty(BatteryManager.BATTERY_PROPERTY_CURRENT_NOW);
-
-            // 骁龙 865 通常返回 uA。这里先取绝对值。
-            float currentA = Math.abs(currentNow) / 1000000f;
-
-            // 兼容性判断：如果读出的电流大得离谱（比如 500A），那它其实是 mA
-            if (currentA > 50) {
-                currentA = Math.abs(currentNow) / 1000f;
-            }
-
-            float voltageV = lastBatteryVoltageMv / 1000f;
-            if (voltageV <= 0) voltageV = 4.0f; // fallback
-
-            float power = currentA * voltageV;
-
-            // 核心修复：基于系统状态判断充放电，而不是依赖内核电流符号
-            boolean isCharging = lastBatteryStatus == BatteryManager.BATTERY_STATUS_CHARGING ||
-                                lastBatteryStatus == BatteryManager.BATTERY_STATUS_FULL;
-
-            data.batteryPowerW = isCharging ? power : -power;
-            data.isCharging = isCharging;
+    // ----- 直接从 sysfs 读取电流（单位 mA）-----
+    float currentmA = 0;
+    try {
+        Process process = Runtime.getRuntime().exec(new String[]{
+            "su", "-c", "cat /sys/class/power_supply/battery/current_now"
+        });
+        BufferedReader reader = new BufferedReader(
+            new InputStreamReader(process.getInputStream())
+        );
+        String line = reader.readLine();
+        if (line != null) {
+            currentmA = Float.parseFloat(line.trim()); // 一加直接输出 mA
         }
-    }
+    } catch (Exception ignored) {}
+
+    // ----- 直接从 sysfs 读取电压（单位 µV），转为 V 并适配双电芯 -----
+    float voltageV = 4.0f; // 默认值
+    try {
+        Process process = Runtime.getRuntime().exec(new String[]{
+            "su", "-c", "cat /sys/class/power_supply/battery/voltage_now"
+        });
+        BufferedReader reader = new BufferedReader(
+            new InputStreamReader(process.getInputStream())
+        );
+        String line = reader.readLine();
+        if (line != null) {
+            float volts = Float.parseFloat(line.trim()) / 1000000f; // 转为 V
+            if (volts < 6.0f) { // 双电芯串联，单电芯读数要乘以 2
+                volts *= 2;
+            }
+            voltageV = volts;
+        }
+    } catch (Exception ignored) {}
+
+    // ----- 计算功率 (W) -----
+    float power = (currentmA * voltageV) / 1000f;
+
+    // 充电状态仍从广播中获取
+    boolean isCharging = lastBatteryStatus == BatteryManager.BATTERY_STATUS_CHARGING ||
+                         lastBatteryStatus == BatteryManager.BATTERY_STATUS_FULL;
+
+    // 不充电时显示 0.00，充电时显示正功率
+    data.batteryPower = isCharging ? Math.abs(power) : 0f;
+    data.isCharging = isCharging;
+}
 
     /** 优先读面板 measured_fps；均失败则标记 READ_FAILED 由 Choreographer 兜底 */
     private void collectFpsData(PerformanceData data) {
