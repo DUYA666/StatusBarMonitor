@@ -368,12 +368,12 @@ public class PerformanceCollector {
                 );
                 String line = reader.readLine();
                 if (line != null) {
-                    currentmA = Float.parseFloat(line.trim()); // 一加直接输出 mA
+                    currentmA = Float.parseFloat(line.trim());
                 }
             } catch (Exception ignored) {}
 
             // ----- 直接从 sysfs 读取电压（单位 µV），转为 V 并适配双电芯 -----
-            float voltageV = 4.0f; // 默认值
+            float voltageV = 4.0f;
             try {
                 Process process = Runtime.getRuntime().exec(new String[]{
                     "su", "-c", "cat /sys/class/power_supply/battery/voltage_now"
@@ -383,8 +383,8 @@ public class PerformanceCollector {
                 );
                 String line = reader.readLine();
                 if (line != null) {
-                    float volts = Float.parseFloat(line.trim()) / 1000000f; // 转为 V
-                    if (volts < 6.0f) { // 双电芯串联，单电芯读数要乘以 2
+                    float volts = Float.parseFloat(line.trim()) / 1000000f;
+                    if (volts < 6.0f) {
                         volts *= 2;
                     }
                     voltageV = volts;
@@ -394,11 +394,9 @@ public class PerformanceCollector {
             // ----- 计算功率 (W) -----
             float power = (currentmA * voltageV) / 1000f;
 
-            // 充电状态仍从广播中获取
             boolean isCharging = lastBatteryStatus == BatteryManager.BATTERY_STATUS_CHARGING ||
                                  lastBatteryStatus == BatteryManager.BATTERY_STATUS_FULL;
 
-            // 不充电时显示 0.00，充电时显示正功率
             data.batteryPower = isCharging ? Math.abs(power) : 0f;
             data.isCharging = isCharging;
         }
