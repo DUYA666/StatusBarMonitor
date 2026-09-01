@@ -355,46 +355,67 @@ public class PerformanceCollector {
         } catch (Exception e) {}
     }
 
+    private String execShell(String cmd) {
+        try {
+            Process process = Runtime.getRuntime().exec("su");
+            DataOutputStream os = new DataOutputStream(process.getOutputStream());
+            os.writeBytes(cmd + "\n");
+            os.writeBytes("exit\n");
+            os.flush();
+            process.waitFor();
+            BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
+            String line = reader.readLine();
+            reader.close();
+            return line;
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
     private void collectBatteryData(PerformanceData data) {
         if (batteryManager != null) {
-            // ----- 直接从 sysfs 读取电流（单位 mA）-----
             float currentmA = 0;
-            try {
-                Process process = Runtime.getRuntime().exec(new String[]{
-                    "su", "-c", "cat /sys/class/power_supply/battery/current_now"
-                });
-                BufferedReader reader = new BufferedReader(
-                    new InputStreamReader(process.getInputStream())
-                );
-                String line = reader.readLine();
-                if (line != null) {
-                    currentmA = Float.parseFloat(line.trim());
-                }
-            } catch (Exception ignored) {}
-
-            // ----- 直接从 sysfs 读取电压（单位 µV），转为 V 并适配双电芯 -----
             float voltageV = 4.0f;
-            try {
-                Process process = Runtime.getRuntime().exec(new String[]{
-                    "su", "-c", "cat /sys/class/power_supply/battery/voltage_now"
-                });
-                BufferedReader reader = new BufferedReader(
-                    new InputStreamReader(process.getInputStream())
-                );
-                String line = reader.readLine();
-                if (line != null) {
-                    float volts = Float.parseFloat(line.trim()) / 1000000f;
+
+            // ----- 使用可靠的 shell 方式读取电流 -----
+            String currentStr = execShell("cat /sys/class/power_supply/battery/current_now");
+            if (currentStr != null && !currentStr.isEmpty()) {
+                try {
+                    currentmA = Float.parseFloat(currentStr.trim());
+                } catch (Exception ignored) {}
+            }
+
+            // ----- 使用可靠的 shell 方式读取电压 -----
+            String voltageStr = execShell("cat /sys/class/power_supply/battery/voltage_now");
+            if (voltageStr != null && !voltageStr.isEmpty()) {
+                try {
+                    float volts = Float.parseFloat(voltageStr.trim()) / 1000000f;
                     if (volts < 6.0f) {
                         volts *= 2;
                     }
                     voltageV = volts;
-                }
-            } catch (Exception ignored) {}
+                } catch (Exception ignored) {}
+            }
 
-            // ----- 计算功率 (W) -----
+            // ----- 如果 shell 方式失败，回退到 BatteryManager API -----
+            if (currentmA == 0) {
+                try {
+                    int currentNow = batteryManager.getIntProperty(BatteryManager.BATTERY_PROPERTY_CURRENT_NOW);
+                    currentmA = currentNow / 1000f;
+                } catch (Exception ignored) {}
+            }
+            if (voltageV == 4.0f) {
+                try {
+                    int voltageMv = batteryManager.getIntProperty(BatteryManager.BATTERY_PROPERTY_VOLTAGE_NOW);
+                    voltageV = voltageMv / 1000f;
+                    if (voltageV < 6.0f) {
+                        voltageV *= 2;
+                    }
+                } catch (Exception ignored) {}
+            }
+
+            // ----- 计算功率 (W)，保留正负号 -----
             float power = (currentmA * voltageV) / 1000f;
-
-            // 直接赋值，保留正负号
             data.batteryPowerW = power;
             data.isCharging = lastBatteryStatus == BatteryManager.BATTERY_STATUS_CHARGING ||
                               lastBatteryStatus == BatteryManager.BATTERY_STATUS_FULL;
