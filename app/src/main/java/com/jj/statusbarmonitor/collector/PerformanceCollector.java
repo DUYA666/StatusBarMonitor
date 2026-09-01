@@ -394,11 +394,10 @@ public class PerformanceCollector {
             // ----- 计算功率 (W) -----
             float power = (currentmA * voltageV) / 1000f;
 
-            boolean isCharging = lastBatteryStatus == BatteryManager.BATTERY_STATUS_CHARGING ||
-                                 lastBatteryStatus == BatteryManager.BATTERY_STATUS_FULL;
-
-            data.batteryPowerW = isCharging ? Math.abs(power) : 0f;  // <-- 改这里
-            data.isCharging = isCharging;
+            // 直接赋值，保留正负号
+            data.batteryPowerW = power;
+            data.isCharging = lastBatteryStatus == BatteryManager.BATTERY_STATUS_CHARGING ||
+                              lastBatteryStatus == BatteryManager.BATTERY_STATUS_FULL;
         }
     }
     /** 优先读面板 measured_fps；均失败则标记 READ_FAILED 由 Choreographer 兜底 */
