@@ -397,7 +397,7 @@ public class PerformanceCollector {
             boolean isCharging = lastBatteryStatus == BatteryManager.BATTERY_STATUS_CHARGING ||
                                  lastBatteryStatus == BatteryManager.BATTERY_STATUS_FULL;
 
-            data.batteryPower = isCharging ? Math.abs(power) : 0f;
+            data.batteryPowerW = isCharging ? Math.abs(power) : 0f;  // <-- 改这里
             data.isCharging = isCharging;
         }
     }
