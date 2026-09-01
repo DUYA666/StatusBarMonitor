@@ -378,11 +378,13 @@ public class PerformanceCollector {
             float currentmA = 0;
             float voltageV = 4.0f;
 
-            // ----- 读取电流（单位：mA）-----
-            String currentStr = execShell("cat /sys/class/power_supply/battery/current_now");
+            // ----- 从 usb 节点读取电流（单位：µA → mA）-----
+            String currentStr = execShell("cat /sys/class/power_supply/usb/current_now");
             if (currentStr != null && !currentStr.isEmpty()) {
                 try {
-                    currentmA = Float.parseFloat(currentStr.trim());
+                    float raw = Float.parseFloat(currentStr.trim());
+                    // usb 节点返回微安 (µA)，需除以 1000 转为毫安 (mA)
+                    currentmA = raw / 1000f;
                 } catch (Exception ignored) {}
             }
 
@@ -394,14 +396,13 @@ public class PerformanceCollector {
                 } catch (Exception ignored) {}
             }
 
-            // ----- 读取电压（单位：µV → V，双电芯×2）-----
-            String voltageStr = execShell("cat /sys/class/power_supply/battery/voltage_now");
+            // ----- 从 usb 节点读取电压（单位：µV → V，双电芯×2）-----
+            String voltageStr = execShell("cat /sys/class/power_supply/usb/voltage_now");
             if (voltageStr != null && !voltageStr.isEmpty()) {
                 try {
                     float volts = Float.parseFloat(voltageStr.trim()) / 1000000f;
-                    if (volts < 6.0f) {
-                        volts *= 2;
-                    }
+                    // usb 电压是单电芯电压，双电芯串联需乘以 2
+                    volts *= 2;
                     voltageV = volts;
                 } catch (Exception ignored) {}
             }
