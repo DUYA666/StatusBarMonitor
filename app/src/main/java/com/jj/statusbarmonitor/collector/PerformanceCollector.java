@@ -417,12 +417,11 @@ public class PerformanceCollector {
             }
 
             // ----- 直接使用原始电流值（不强制修正符号）-----
-            // 充电时电流为正（+），放电时电流为负（-）
             float signedCurrent = currentmA;
 
-            // ----- 计算功率 (W) 并放大 1000 倍（适配节点单位）-----
+            // ----- 计算功率 (W) 并放大 -1000 倍（反转符号）-----
             float power = (signedCurrent * voltageV) / 1000f;
-            power *= 1000f;
+            power *= -1000f;   // <--- 改这里：乘以 -1000 反转符号
 
             data.batteryPowerW = power;
             data.isCharging = lastBatteryStatus == BatteryManager.BATTERY_STATUS_CHARGING ||
