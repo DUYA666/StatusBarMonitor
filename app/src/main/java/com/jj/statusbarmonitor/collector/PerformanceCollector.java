@@ -403,7 +403,9 @@ public class PerformanceCollector {
             if (voltageStr != null && !voltageStr.isEmpty()) {
                 try {
                     float volts = Float.parseFloat(voltageStr.trim()) / 1000000f;
-                    volts *= 2; // 双电芯
+                    if (volts < 6.0f) {
+                        volts *= 2; // 双电芯
+                    }
                     voltageV = volts;
                 } catch (Exception ignored) {}
             }
@@ -414,20 +416,17 @@ public class PerformanceCollector {
                 if (voltageV < 6.0f) voltageV *= 2;
             }
 
-            // ----- 判断充电状态 -----
-            boolean isCharging = lastBatteryStatus == BatteryManager.BATTERY_STATUS_CHARGING ||
-                                 lastBatteryStatus == BatteryManager.BATTERY_STATUS_FULL;
+            // ----- 直接使用原始电流值（不强制修正符号）-----
+            // 充电时电流为正（+），放电时电流为负（-）
+            float signedCurrent = currentmA;
 
-            // ----- 强制修正符号：充电取正，放电取负 -----
-            float absCurrent = Math.abs(currentmA);
-            float signedCurrent = isCharging ? absCurrent : -absCurrent;
-
-            // ----- 计算功率 (W) 并强制放大 1000 倍 -----
+            // ----- 计算功率 (W) 并放大 1000 倍（适配节点单位）-----
             float power = (signedCurrent * voltageV) / 1000f;
-            power *= 1000f; // 适配当前节点单位
+            power *= 1000f;
 
             data.batteryPowerW = power;
-            data.isCharging = isCharging;
+            data.isCharging = lastBatteryStatus == BatteryManager.BATTERY_STATUS_CHARGING ||
+                              lastBatteryStatus == BatteryManager.BATTERY_STATUS_FULL;
         }
     }
     /** 优先读面板 measured_fps；均失败则标记 READ_FAILED 由 Choreographer 兜底 */
